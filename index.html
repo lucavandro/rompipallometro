@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rompipallometro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f47b25",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#221710",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .noise-ring {
+            stroke-dasharray: 628;
+            stroke-dashoffset: 628;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-stone-900 dark:text-stone-100">
+<div class="flex flex-col min-h-screen">
+<header class="flex items-center justify-between p-6 border-b border-primary/20 dark:border-primary/30">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 text-primary">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z" fill="currentColor"></path>
+</svg>
+</div>
+<h1 class="text-2xl font-bold text-stone-900 dark:text-stone-100">Rompipallometro</h1>
+</div>
+<button id="darkModeToggle" class="w-10 h-10 p-2 rounded-full hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark transition-transform duration-300 hover:rotate-180 flex items-center justify-center">
+<span class="material-symbols-outlined text-stone-900 dark:text-stone-100">
+                    dark_mode
+                </span>
+</button>
+</header>
+<main class="flex flex-col items-center justify-center flex-grow p-6 text-center">
+<div class="relative w-64 h-64 sm:w-80 sm:h-80 flex items-center justify-center mb-8">
+<svg class="absolute inset-0 w-full h-full" viewBox="0 0 232 232" id="ring">
+<circle class="stroke-primary/20 dark:stroke-primary/30" cx="116" cy="116" fill="none" r="100" stroke-width="24"></circle>
+<circle class="noise-ring transform -rotate-90 origin-center stroke-primary" cx="116" cy="116" fill="none" r="100" stroke-width="24" style="stroke-dashoffset: 314;"></circle>
+</svg>
+<div class="flex flex-col items-center">
+<span class="text-7xl sm:text-8xl font-bold text-stone-900 dark:text-stone-100" id="db">50</span>
+<span class="text-xl font-medium text-stone-600 dark:text-stone-400">dB</span>
+</div>
+</div>
+<p class="max-w-md mx-auto text-lg text-stone-700 dark:text-stone-300 mb-8 h-[4.5rem] overflow-hidden" id="description">
+                Il livello di rumore è come una conversazione vivace in un bar. Non troppo forte, ma decisamente non silenzioso.
+            </p>
+<button class="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark transition-all duration-300 ease-in-out transform hover:scale-105">
+               Inizia
+            </button>
+</main>
+</div>
+
+<script>
+    let audioContext;
+    let analyser;
+    let microphone;
+    let dataArray;
+    let isListening = false;
+
+    const dbSpan = document.getElementById('db');
+    const ring = document.querySelector('.noise-ring');
+    const startButton = document.querySelector('button.bg-primary');
+    const descriptionText = document.querySelector('main p');
+
+    // Descrizioni in base al livello di decibel
+    const descriptions = {
+        0: "Silenzio assoluto. Quasi inquietante.",
+        20: "Silenzio totale, come in una biblioteca deserta.",
+        30: "Criptorchidismo",
+        40: "Sembrate le vecchie che dicono il rosario.",
+        50: "Come un bambino di sei mesi: mi sdono appena scese.",
+        60: "Le palle fanno capolino dalla mutanda.",
+        70: "Le palle sono ok, ma il cazzo lo avete già rotto.",
+        80: "Le mie palle hanno lasciato l'edificio",
+        90: "Si vedono già le crepe sui testicoli.",
+        100: "Le mie palle sono espolse!"
+    };
+
+    function getDescription(db) {
+        if (db < 20) return descriptions[0];
+        if (db < 30) return descriptions[20];
+        if (db < 40) return descriptions[30];
+        if (db < 50) return descriptions[40];
+        if (db < 60) return descriptions[50];
+        if (db < 70) return descriptions[60];
+        if (db < 80) return descriptions[70];
+        if (db < 90) return descriptions[80];
+        if (db < 100) return descriptions[90];
+        return descriptions[100];
+    }
+
+    function updateRing(db) {
+        // Il cerchio ha una circonferenza di 628 (2 * π * r, dove r=100)
+        // Mappiamo i decibel da 0-120 a 0-628
+        const maxDb = 120;
+        const circumference = 628;
+        const normalizedDb = Math.min(Math.max(db, 0), maxDb);
+        const offset = circumference - (normalizedDb / maxDb) * circumference;
+        ring.style.strokeDashoffset = offset;
+    }
+
+    function calculateDecibels() {
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calcola il valore RMS (Root Mean Square)
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i] * dataArray[i];
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        
+        // Converti in decibel (scala logaritmica)
+        // Aggiungiamo un offset per ottenere valori realistici
+        const db = Math.round(20 * Math.log10(rms + 1) + 30);
+        
+        return Math.max(0, Math.min(120, db)); // Limita tra 0 e 120 dB
+    }
+
+    function updateMeter() {
+        if (!isListening) return;
+
+        const db = calculateDecibels();
+        dbSpan.textContent = db;
+        updateRing(db);
+        descriptionText.textContent = getDescription(db);
+
+        requestAnimationFrame(updateMeter);
+    }
+
+    async function startListening() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            microphone = audioContext.createMediaStreamSource(stream);
+            
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            
+            microphone.connect(analyser);
+            
+            isListening = true;
+            startButton.textContent = 'Ferma';
+            startButton.classList.add('bg-red-500');
+            startButton.classList.remove('bg-primary');
+            
+            updateMeter();
+        } catch (error) {
+            console.error('Errore nell\'accesso al microfono:', error);
+            alert('Impossibile accedere al microfono. Verifica i permessi.');
+        }
+    }
+
+    function stopListening() {
+        isListening = false;
+        
+        if (microphone) {
+            microphone.disconnect();
+            microphone.mediaStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (audioContext) {
+            audioContext.close();
+        }
+        
+        startButton.textContent = 'Inizia';
+        startButton.classList.remove('bg-red-500');
+        startButton.classList.add('bg-primary');
+    }
+
+    startButton.addEventListener('click', () => {
+        if (isListening) {
+            stopListening();
+        } else {
+            startListening();
+        }
+    });
+
+    // Dark mode toggle
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const darkModeIcon = darkModeToggle.querySelector('.material-symbols-outlined');
+    
+    // Check for saved dark mode preference or detect system preference
+    const savedDarkMode = localStorage.getItem('darkMode');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : systemPrefersDark;
+    
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        darkModeIcon.textContent = 'light_mode';
+    }
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        // Only apply if user hasn't manually set a preference
+        if (localStorage.getItem('darkMode') === null) {
+            if (e.matches) {
+                document.documentElement.classList.add('dark');
+                darkModeIcon.textContent = 'light_mode';
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkModeIcon.textContent = 'dark_mode';
+            }
+        }
+    });
+    
+    darkModeToggle.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.documentElement.classList.contains('dark');
+        darkModeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('darkMode', isDark);
+    });
+</script>
+
+</body></html>
